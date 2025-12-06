@@ -1,0 +1,1432 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Mouse Controller</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Light Mode Colors */
+            --bg-gradient-start: #f5f7fa;
+            --bg-gradient-end: #e4e8ec;
+            --card-bg: rgba(255, 255, 255, 0.75);
+            --card-border: rgba(255, 255, 255, 0.9);
+            --card-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.1), 0 2px 10px -2px rgba(0, 0, 0, 0.05);
+            /* Stronger shadow */
+            --card-shadow-hover: 0 20px 50px -12px rgba(0, 0, 0, 0.15), 0 8px 24px -4px rgba(0, 0, 0, 0.08);
+            --card-highlight: inset 0 2px 0 rgba(255, 255, 255, 0.8), inset 0 -2px 0 rgba(0, 0, 0, 0.05);
+            /* Enhanced highlight */
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --text-muted: #9ca3af;
+            --input-bg: rgba(255, 255, 255, 0.8);
+            --input-border: rgba(0, 0, 0, 0.08);
+            --titlebar-bg: rgba(255, 255, 255, 0.95);
+            --titlebar-border: rgba(0, 0, 0, 0.08);
+            --binding-item-bg: rgba(255, 255, 255, 0.6);
+            --status-indicator-bg: rgba(255, 255, 255, 0.9);
+        }
+
+        [data-theme="dark"] {
+            /* Dark Mode Colors - Deep Dark Theme */
+            --bg-gradient-start: #0a0b10;
+            --bg-gradient-end: #12141a;
+            --card-bg: rgba(22, 24, 28, 0.85);
+            /* Darker card */
+            --card-border: rgba(255, 255, 255, 0.06);
+            --card-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.4);
+            --card-shadow-hover: 0 20px 60px rgba(0, 0, 0, 0.8), 0 10px 30px rgba(0, 0, 0, 0.5);
+            --card-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.05), inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+            --text-primary: #f2f3f5;
+            --text-secondary: #949ba4;
+            --text-muted: #5e626a;
+            --input-bg: rgba(0, 0, 0, 0.3);
+            --input-border: rgba(255, 255, 255, 0.1);
+            --titlebar-bg: rgba(10, 11, 15, 0.95);
+            --titlebar-border: rgba(255, 255, 255, 0.05);
+            --binding-item-bg: rgba(35, 37, 43, 0.7);
+            --status-indicator-bg: rgba(20, 22, 26, 0.95);
+            --orb-opacity: 0.15;
+            /* Dimmer orbs */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            padding-top: 52px;
+            overflow: hidden;
+            transition: background 0.3s ease;
+        }
+
+        /* macOS Style Title Bar */
+        .macos-titlebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 38px;
+            background: var(--titlebar-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--titlebar-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 14px;
+            z-index: 1000;
+            user-select: none;
+            transition: background 0.3s ease, border-color 0.3s ease;
+        }
+
+        .traffic-lights {
+            display: flex;
+            gap: 8px;
+            -webkit-app-region: no-drag;
+            /* Buttons should be clickable */
+        }
+
+        .traffic-light {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .traffic-light svg {
+            width: 8px;
+            height: 8px;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+
+        .traffic-lights:hover .traffic-light svg {
+            opacity: 1;
+        }
+
+        .traffic-light.close {
+            background: linear-gradient(180deg, #ff6058 0%, #e04942 100%);
+            border: 1px solid rgba(0, 0, 0, 0.12);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .traffic-light.close:hover {
+            background: linear-gradient(180deg, #ff7369 0%, #e05a53 100%);
+        }
+
+        .traffic-light.close:active {
+            background: linear-gradient(180deg, #cc4d47 0%, #b5403b 100%);
+        }
+
+        .traffic-light.close svg {
+            stroke: #4d0000;
+            stroke-width: 1.5;
+        }
+
+        .traffic-light.minimize {
+            background: linear-gradient(180deg, #ffbd2e 0%, #dea123 100%);
+            border: 1px solid rgba(0, 0, 0, 0.12);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .traffic-light.minimize:hover {
+            background: linear-gradient(180deg, #ffc944 0%, #e8b035 100%);
+        }
+
+        .traffic-light.minimize:active {
+            background: linear-gradient(180deg, #cc9725 0%, #b5861f 100%);
+        }
+
+        .traffic-light.minimize svg {
+            stroke: #985700;
+            stroke-width: 2;
+        }
+
+        .traffic-light.maximize {
+            background: linear-gradient(180deg, #28c940 0%, #1eab36 100%);
+            border: 1px solid rgba(0, 0, 0, 0.12);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            opacity: 0.4;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .traffic-light.maximize:hover {
+            background: linear-gradient(180deg, #28c940 0%, #1eab36 100%);
+        }
+
+        .traffic-light.maximize:active {
+            background: linear-gradient(180deg, #28c940 0%, #1eab36 100%);
+        }
+
+        .traffic-light.maximize svg {
+            fill: #006500;
+            opacity: 0 !important;
+        }
+
+        .titlebar-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-primary);
+            transition: color 0.3s ease;
+        }
+
+        .titlebar-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .theme-toggle {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-secondary);
+        }
+
+        .theme-toggle:hover {
+            background: var(--binding-item-bg);
+            color: var(--text-primary);
+        }
+
+        .theme-toggle svg {
+            width: 16px;
+            height: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle .sun-icon {
+            display: block;
+        }
+
+        .theme-toggle .moon-icon {
+            display: none;
+        }
+
+        [data-theme="dark"] .theme-toggle .sun-icon {
+            display: none;
+        }
+
+        [data-theme="dark"] .theme-toggle .moon-icon {
+            display: block;
+        }
+
+        /* Theme Reveal Overlay */
+        .theme-reveal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 10000;
+            pointer-events: none;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s ease-in, height 0.6s ease-in;
+        }
+
+        /* Animated Background Orbs */
+        .bg-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: 0;
+            opacity: 0.6;
+            animation: float 8s ease-in-out infinite;
+            transition: opacity 0.5s ease;
+        }
+
+        [data-theme="dark"] .bg-orb {
+            opacity: var(--orb-opacity);
+            filter: blur(100px);
+        }
+
+        .orb-1 {
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(135deg, #fbc2eb, #a6c1ee);
+            top: -100px;
+            right: -50px;
+            animation-delay: 0s;
+        }
+
+        .orb-2 {
+            width: 250px;
+            height: 250px;
+            background: linear-gradient(135deg, #a8edea, #fed6e3);
+            bottom: -80px;
+            left: -50px;
+            animation-delay: 2s;
+        }
+
+        .orb-3 {
+            width: 200px;
+            height: 200px;
+            background: linear-gradient(135deg, #d299c2, #fef9d7);
+            top: 50%;
+            right: -100px;
+            animation-delay: 4s;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0) scale(1);
+            }
+
+            50% {
+                transform: translateY(-20px) scale(1.05);
+            }
+        }
+
+        /* Main Container - Horizontal Layout */
+        .container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 760px;
+            display: flex;
+            gap: 16px;
+            min-height: calc(100vh - 90px);
+        }
+
+        /* Left Column */
+        .left-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Right Column */
+        .right-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Status Card - takes available space */
+        .status-card {
+            flex: 1;
+        }
+
+        /* Bindings Card */
+        .bindings-card {
+            flex: 0 0 auto;
+        }
+
+        /* Settings Card - takes available space */
+        .settings-card {
+            flex: 1;
+        }
+
+        /* Bindings Row - horizontal layout */
+        .bindings-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .binding-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            background: var(--binding-item-bg);
+            border-radius: 14px;
+            padding: 14px 10px;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .binding-item:hover {
+            background: var(--card-bg);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        }
+
+        .binding-item:active {
+            transform: translateY(-1px) scale(0.98);
+        }
+
+        .binding-item .binding-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+        }
+
+        .binding-item .binding-icon svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .binding-item .binding-info {
+            text-align: center;
+        }
+
+        .binding-item .binding-name {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .binding-item .binding-btn {
+            width: 100%;
+            padding: 6px 10px;
+            font-size: 11px;
+            font-weight: 500;
+            min-width: unset;
+            background: var(--input-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--card-border);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Glass Card - 3D Effect */
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: 1px solid var(--card-border);
+            box-shadow: var(--card-shadow), var(--card-highlight);
+            padding: 16px;
+            margin-bottom: 0;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 100%);
+            border-radius: 20px 20px 0 0;
+            pointer-events: none;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-6px);
+            box-shadow: var(--card-shadow-hover), var(--card-highlight);
+        }
+
+        .glass-card:active {
+            transform: translateY(-2px) scale(0.98);
+            transition: all 0.1s ease;
+        }
+
+        /* Status Card */
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .status-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .status-count {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .status-indicator {
+            background: var(--status-indicator-bg);
+            border-radius: 16px;
+            padding: 16px;
+            border-left: 4px solid var(--text-muted);
+            transition: all 0.3s ease;
+        }
+
+        .status-indicator.connected {
+            border-left-color: #10b981;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), var(--status-indicator-bg));
+        }
+
+        .status-indicator.muted {
+            border-left-color: #f59e0b;
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), var(--status-indicator-bg));
+        }
+
+        .status-indicator.deafened {
+            border-left-color: #ef4444;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), var(--status-indicator-bg));
+        }
+
+        /* Tags */
+        .tags {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            background: var(--binding-item-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+
+        .tag.active {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+            color: white;
+            border: none;
+            box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+        }
+
+        .status-main {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .status-sub {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* Input Fields */
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--input-border);
+            background: var(--input-bg);
+            font-size: 14px;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #5865f2;
+            box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.2);
+        }
+
+        .form-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* Bindings Grid - Horizontal Layout */
+        .bindings-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .binding-card {
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            transition: all 0.2s ease;
+        }
+
+        .binding-card:hover {
+            background: rgba(255, 255, 255, 0.8);
+            transform: translateY(-2px);
+        }
+
+        .binding-info {
+            text-align: center;
+        }
+
+        .binding-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .binding-sub {
+            font-size: 11px;
+            color: #9ca3af;
+        }
+
+        .binding-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .binding-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            /* Clickable */
+        }
+
+        .binding-icon:active {
+            transform: scale(0.92);
+        }
+
+        .binding-icon::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .binding-card:hover .binding-icon {
+            transform: scale(1.08);
+        }
+
+        .binding-icon.deafen {
+            background: linear-gradient(145deg, #ff6b6b, #ee5a5a);
+            box-shadow:
+                0 4px 15px rgba(238, 90, 90, 0.35),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .binding-icon.deafen::before {
+            background: linear-gradient(145deg, #ff8080, #ff6b6b);
+        }
+
+        .binding-card:hover .binding-icon.deafen::before {
+            opacity: 1;
+        }
+
+        .binding-icon.mute {
+            background: linear-gradient(145deg, #fbbf24, #f59e0b);
+            box-shadow:
+                0 4px 15px rgba(245, 158, 11, 0.35),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .binding-icon.mute::before {
+            background: linear-gradient(145deg, #fcd34d, #fbbf24);
+        }
+
+        .binding-card:hover .binding-icon.mute::before {
+            opacity: 1;
+        }
+
+        .binding-icon svg {
+            width: 24px;
+            height: 24px;
+            fill: white;
+            position: relative;
+            z-index: 1;
+            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
+        }
+
+        .binding-btn {
+            padding: 8px 12px;
+            border-radius: 10px;
+            border: none;
+            background: rgba(0, 0, 0, 0.06);
+            font-size: 11px;
+            font-weight: 500;
+            color: #374151;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-width: 80px;
+            font-family: inherit;
+            text-align: center;
+        }
+
+        .binding-btn:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .binding-btn.binding {
+            background: linear-gradient(135deg, #5865f2, #4752c4);
+            color: white;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        /* Expandable Section */
+        .expand-btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            font-size: 13px;
+            color: #5865f2;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-family: inherit;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .expand-btn:hover {
+            color: #4752c4;
+        }
+
+        .expand-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .expand-content.show {
+            max-height: 200px;
+        }
+
+        /* Settings Toggle */
+        .settings-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #e5e7eb;
+            border-radius: 24px;
+            transition: 0.3s;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            border-radius: 50%;
+            transition: 0.3s;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        .toggle-switch input:checked+.toggle-slider {
+            background: linear-gradient(135deg, #5865f2, #4752c4);
+        }
+
+        .toggle-switch input:checked+.toggle-slider:before {
+            transform: translateX(20px);
+        }
+
+        /* Action Button */
+        .action-btn {
+            width: 100%;
+            padding: 16px;
+            border-radius: 16px;
+            border: none;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .action-btn.connect {
+            background: linear-gradient(135deg, #5865f2, #4752c4);
+            color: white;
+            box-shadow: 0 4px 15px rgba(88, 101, 242, 0.3);
+        }
+
+        .action-btn.connect:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(88, 101, 242, 0.4);
+        }
+
+        .action-btn.disconnect {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+        }
+
+        .action-btn.disconnect:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+        }
+
+        /* Last Input */
+        .last-input {
+            font-size: 10px;
+            color: #9ca3af;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 16px;
+            font-size: 11px;
+            color: #9ca3af;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: rgba(31, 41, 55, 0.95);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 13px;
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .notification.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- macOS Style Title Bar -->
+    <div class="macos-titlebar">
+        <div class="titlebar-title">Discord Mouse Controller</div>
+        <div class="titlebar-controls">
+            <!-- Dark Mode Toggle -->
+            <div class="theme-toggle" onclick="toggleTheme(event)" title="切換深色模式">
+                <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <line x1="12" y1="1" x2="12" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="23"></line>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                    <line x1="1" y1="12" x2="3" y2="12"></line>
+                    <line x1="21" y1="12" x2="23" y2="12"></line>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+                <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+            </div>
+            <div class="traffic-lights">
+                <div class="traffic-light maximize">
+                    <svg viewBox="0 0 8 8">
+                        <path d="M1 1H7V7H1V1Z" />
+                    </svg>
+                </div>
+                <div class="traffic-light minimize" onclick="minimizeWindow()">
+                    <svg viewBox="0 0 8 8" fill="none">
+                        <path d="M1 4H7" stroke-linecap="round" />
+                    </svg>
+                </div>
+                <div class="traffic-light close" onclick="closeWindow()">
+                    <svg viewBox="0 0 8 8" fill="none">
+                        <path d="M1 1L7 7M7 1L1 7" stroke-linecap="round" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Background Orbs -->
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+    <div class="bg-orb orb-3"></div>
+
+
+    <div class="container">
+        <!-- Left Column: Status + Bindings -->
+        <div class="left-column">
+            <!-- Status Card -->
+            <div class="glass-card status-card">
+                <div class="status-header">
+                    <span class="status-title">Voice Status</span>
+                    <span class="status-count" id="status-count">Discord RPC</span>
+                </div>
+
+                <div class="status-indicator" id="status-indicator">
+                    <div class="tags">
+                        <span class="tag" id="tag-deaf">Deafen</span>
+                        <span class="tag" id="tag-mute">Mute</span>
+                        <span class="tag active" id="tag-status">Waiting</span>
+                    </div>
+                    <div class="status-main" id="status-main">等待連接</div>
+                    <div class="status-sub" id="status-sub">請先輸入 API 憑證並連接</div>
+                </div>
+            </div>
+
+            <!-- Bindings Card -->
+            <div class="glass-card bindings-card">
+                <div class="status-header">
+                    <span class="status-title">按鍵綁定</span>
+                </div>
+
+                <div class="bindings-row">
+                    <div class="binding-item" onclick="toggleDeafen(event)" style="cursor: pointer;">
+                        <div class="binding-icon deafen" title="點擊切換拒聽狀態">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path
+                                    d="M12 4C8.69 4 6 6.69 6 10V16C6 17.1 6.9 18 8 18H9V11H7V10C7 7.24 9.24 5 12 5C14.76 5 17 7.24 17 10V11H15V18H17C18.1 18 19 17.1 19 16V10C19 6.69 16.31 4 12 4Z" />
+                                <path d="M11 21H13C13.55 21 14 20.55 14 20H10C10 20.55 10.45 21 11 21Z" />
+                                <line x1="4" y1="4" x2="20" y2="20" stroke="white" stroke-width="2.5"
+                                    stroke-linecap="round" />
+                            </svg>
+                        </div>
+                        <div class="binding-info">
+                            <div class="binding-name">拒聽</div>
+                        </div>
+                        <button class="binding-btn" id="btn-bind-deaf"
+                            onclick="event.stopPropagation(); bindDeafen()">None</button>
+                    </div>
+
+                    <div class="binding-item" onclick="toggleMute(event)" style="cursor: pointer;">
+                        <div class="binding-icon mute" title="點擊切換靜音狀態">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path
+                                    d="M12 14C13.66 14 15 12.66 15 11V5C15 3.34 13.66 2 12 2C10.34 2 9 3.34 9 5V11C9 12.66 10.34 14 12 14Z" />
+                                <path
+                                    d="M17 11C17 13.76 14.76 16 12 16C9.24 16 7 13.76 7 11H5C5 14.53 7.61 17.43 11 17.92V21H13V17.92C16.39 17.43 19 14.53 19 11H17Z" />
+                                <line x1="4" y1="4" x2="20" y2="20" stroke="white" stroke-width="2.5"
+                                    stroke-linecap="round" />
+                            </svg>
+                        </div>
+                        <div class="binding-info">
+                            <div class="binding-name">靜音</div>
+                        </div>
+                        <button class="binding-btn" id="btn-bind-mute"
+                            onclick="event.stopPropagation(); bindMute()">None</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Settings + Connect -->
+        <div class="right-column">
+            <!-- Settings Card -->
+            <div class="glass-card settings-card">
+                <div class="status-header">
+                    <span class="status-title">API 設定</span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Client ID</label>
+                    <input type="text" class="form-input" id="client-id" placeholder="輸入 Discord Client ID">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Client Secret</label>
+                    <input type="password" class="form-input" id="client-secret" placeholder="輸入 Discord Client Secret">
+                </div>
+
+                <div class="settings-row">
+                    <span class="binding-label">關閉時縮小至系統列</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="minimize-tray">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="settings-row" style="margin-top: 12px;">
+                    <span class="binding-label">開機自動啟動</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="startup-toggle" onchange="toggleStartup(this.checked)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div
+                    style="text-align: center; margin-top: 20px; opacity: 0.3; font-size: 12px; color: var(--text-secondary);">
+                    by Svemic</div>
+            </div>
+
+            <!-- Action Button -->
+            <button class="action-btn connect" id="action-btn" onclick="toggleConnection()">
+                <span id="action-text">連接 Discord</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div class="notification" id="notification"></div>
+
+    <script>
+        // macOS-style window controls
+        function closeWindow() {
+            if (window.pywebview && window.pywebview.api) {
+                pywebview.api.close_window();
+            }
+        }
+
+        function minimizeWindow() {
+            if (window.pywebview && window.pywebview.api) {
+                pywebview.api.minimize_window();
+            }
+        }
+
+        // Helper to delay
+        const delay = ms => new Promise(res => setTimeout(res, ms));
+
+        // Dark Mode Toggle (Manual Animation)
+        async function toggleTheme(event) {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+            // Get click position
+            const x = event ? event.clientX : window.innerWidth / 2;
+            const y = event ? event.clientY : window.innerHeight / 2;
+
+            // Create overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'theme-reveal-overlay';
+            // Set color based on TARGET theme
+            overlay.style.backgroundColor = newTheme === 'dark' ? '#1a1b1e' : '#f5f7fa';
+            overlay.style.top = y + 'px';
+            overlay.style.left = x + 'px';
+            overlay.style.width = '0px';
+            overlay.style.height = '0px';
+
+            document.body.appendChild(overlay);
+
+            // Force reflow
+            overlay.getBoundingClientRect();
+
+            // Animate expand
+            const maxDim = Math.max(window.innerWidth, window.innerHeight) * 2.5;
+            overlay.style.width = maxDim + 'px';
+            overlay.style.height = maxDim + 'px';
+
+            // Wait for expansion to cover screen (match CSS transition)
+            await delay(500);
+
+            // Switch actual theme behind the overlay
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+
+            // Fade out overlay
+            overlay.style.transition = 'opacity 0.4s ease';
+            overlay.style.opacity = '0';
+
+            // Cleanup
+            await delay(400);
+            overlay.remove();
+        }
+
+        // Direct Toggle Functions
+        function toggleMute(event) {
+            if (event) event.stopPropagation();
+
+            if (window.pywebview && window.pywebview.api) {
+                // Visual feedback
+                const btn = document.querySelector('.binding-icon.mute');
+                btn.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    btn.style.transform = '';
+                }, 150);
+
+                pywebview.api.toggle_mute();
+            }
+        }
+
+        function toggleDeafen(event) {
+            if (event) event.stopPropagation();
+
+            if (window.pywebview && window.pywebview.api) {
+                // Visual feedback
+                const btn = document.querySelector('.binding-icon.deafen');
+                btn.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    btn.style.transform = '';
+                }, 150);
+
+                pywebview.api.toggle_deafen();
+            }
+        }
+
+        // Toggle Startup
+        async function toggleStartup(enabled) {
+            if (window.pywebview && window.pywebview.api) {
+                const success = await pywebview.api.set_startup(enabled);
+                if (success) {
+                    showNotification(enabled ? "已開啟開機自動啟動" : "已關閉開機自動啟動");
+                } else {
+                    document.getElementById('startup-toggle').checked = !enabled;
+                    showNotification("設定失敗", true);
+                }
+            }
+        }
+
+        // Initialize stuff
+        window.addEventListener('pywebviewready', function () {
+            // Check startup status
+            if (window.pywebview && window.pywebview.api) {
+                pywebview.api.get_startup().then(isEnabled => {
+                    const toggle = document.getElementById('startup-toggle');
+                    if (toggle) toggle.checked = isEnabled;
+                });
+            }
+        });
+
+        // Initialize theme on page load
+        (function initTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                document.documentElement.setAttribute('data-theme', savedTheme);
+            } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+
+        let isConnected = false;
+        let bindingTarget = null;
+
+        // Test API on load
+        window.addEventListener('pywebviewready', function () {
+            console.log("PyWebView is ready!");
+            if (window.pywebview && window.pywebview.api) {
+                pywebview.api.test_api().then(result => {
+                    console.log("✓ API Test Result:", result);
+                    // showNotification("API 已就緒: " + result);
+                }).catch(err => {
+                    console.error("✗ API Test Failed:", err);
+                    showNotification("API 測試失敗: " + err);
+                });
+            } else {
+                console.error("✗ pywebview.api not found");
+                showNotification("錯誤: PyWebView API 未找到");
+            }
+        });
+
+        // Toggle expand
+        function toggleExpand() {
+            const content = document.getElementById('expand-content');
+            const text = document.getElementById('expand-text');
+            const arrow = document.getElementById('expand-arrow');
+
+            content.classList.toggle('show');
+            if (content.classList.contains('show')) {
+                text.textContent = '隱藏 API 設定';
+                arrow.textContent = '▲';
+            } else {
+                text.textContent = '展開 API 設定';
+                arrow.textContent = '▼';
+            }
+        }
+
+        // Toggle connection
+        async function toggleConnection() {
+            const btn = document.getElementById('action-btn');
+            const text = document.getElementById('action-text');
+
+            if (!isConnected) {
+                const clientId = document.getElementById('client-id').value;
+                const clientSecret = document.getElementById('client-secret').value;
+
+                if (!clientId || !clientSecret) {
+                    document.getElementById('expand-content').classList.add('show');
+                    document.getElementById('expand-text').textContent = '隱藏 API 設定';
+                    document.getElementById('expand-arrow').textContent = '▲';
+                    showNotification('請輸入 Client ID 和 Client Secret');
+                    return;
+                }
+
+                text.innerHTML = '<div class="spinner"></div> 連接中...';
+                btn.disabled = true;
+
+                try {
+                    await pywebview.api.connect(clientId, clientSecret);
+                } catch (e) {
+                    showNotification('連接失敗: ' + e);
+                    text.textContent = '連接 Discord';
+                    btn.disabled = false;
+                }
+            } else {
+                await pywebview.api.disconnect();
+            }
+        }
+
+        // Dedicated binding functions
+        // Dedicated binding functions
+        function bindDeafen() {
+            console.log("=== bindDeafen clicked ===");
+            console.log("pywebview exists:", !!window.pywebview);
+            console.log("pywebview.api exists:", !!(window.pywebview && window.pywebview.api));
+
+            if (window.pywebview && window.pywebview.api) {
+                console.log("Available API methods:", Object.keys(window.pywebview.api));
+            }
+
+            showNotification("拒聽綁定中...");
+
+            bindingTarget = 'deafen';
+            const btn = document.getElementById('btn-bind-deaf');
+            btn.classList.add('binding');
+            btn.textContent = '請按鍵...';
+            document.getElementById('btn-bind-deaf').disabled = true;
+            document.getElementById('btn-bind-mute').disabled = true;
+
+            if (window.pywebview && window.pywebview.api) {
+                console.log("Calling set_bind_target(0)...");
+                pywebview.api.set_bind_target(0).then(() => {
+                    console.log("✓ set_bind_target(0) returned successfully");
+                }).catch(err => {
+                    console.error("✗ set_bind_target error:", err);
+                    showNotification("錯誤: " + err);
+                    resetBindingUI();
+                });
+            } else {
+                console.error("✗ API not available!");
+                showNotification("API 未就緒");
+                resetBindingUI();
+            }
+        }
+
+        function bindMute() {
+            console.log("JS: bindMute clicked!");
+            showNotification("靜音綁定中...");
+
+            bindingTarget = 'mute';
+            const btn = document.getElementById('btn-bind-mute');
+            btn.classList.add('binding');
+            btn.textContent = '請按鍵...';
+            document.getElementById('btn-bind-deaf').disabled = true;
+            document.getElementById('btn-bind-mute').disabled = true;
+
+            if (window.pywebview && window.pywebview.api) {
+                pywebview.api.set_bind_target(1).then(() => {
+                    console.log("JS: bind_mute API success");
+                }).catch(err => {
+                    console.error("bind_mute error:", err);
+                    showNotification("錯誤: " + err);
+                    resetBindingUI();
+                });
+            } else {
+                showNotification("API 未就緒");
+                resetBindingUI();
+            }
+        }
+
+        function resetBindingUI() {
+            document.getElementById('btn-bind-deaf').disabled = false;
+            document.getElementById('btn-bind-mute').disabled = false;
+            document.getElementById('btn-bind-deaf').classList.remove('binding');
+            document.getElementById('btn-bind-mute').classList.remove('binding');
+            bindingTarget = null;
+        }
+
+        // Legacy startBinding (kept for compatibility)
+        function startBinding(target) {
+            if (target === 'deafen') bindDeafen();
+            else bindMute();
+        }
+
+        // Show notification
+        function showNotification(message) {
+            const notif = document.getElementById('notification');
+            notif.textContent = message;
+            notif.classList.add('show');
+            setTimeout(() => notif.classList.remove('show'), 3000);
+        }
+
+        // === Python Callbacks ===
+
+        window.updateConnectionStatus = function (connected) {
+            isConnected = connected;
+            const btn = document.getElementById('action-btn');
+            const text = document.getElementById('action-text');
+
+            btn.disabled = false;
+
+            if (connected) {
+                btn.className = 'action-btn disconnect';
+                text.textContent = '斷開連接';
+            } else {
+                btn.className = 'action-btn connect';
+                text.textContent = '連接 Discord';
+            }
+        }
+
+        window.updateVoiceStatus = function (deaf, mute) {
+            const indicator = document.getElementById('status-indicator');
+            const main = document.getElementById('status-main');
+            const sub = document.getElementById('status-sub');
+            const tagDeaf = document.getElementById('tag-deaf');
+            const tagMute = document.getElementById('tag-mute');
+            const tagStatus = document.getElementById('tag-status');
+
+            // Reset tags
+            tagDeaf.className = 'tag';
+            tagMute.className = 'tag';
+
+            if (deaf) {
+                indicator.className = 'status-indicator deafened';
+                main.textContent = '🔇 拒聽 (Deafened)';
+                sub.textContent = '已關閉所有音訊';
+                tagDeaf.classList.add('active');
+                tagStatus.textContent = 'Deafened';
+            } else if (mute) {
+                indicator.className = 'status-indicator muted';
+                main.textContent = '🔴 靜音 (Muted)';
+                sub.textContent = '麥克風已關閉';
+                tagMute.classList.add('active');
+                tagStatus.textContent = 'Muted';
+            } else {
+                indicator.className = 'status-indicator connected';
+                main.textContent = '🟢 通話中 (Open Mic)';
+                sub.textContent = '麥克風已開啟';
+                tagStatus.textContent = 'Active';
+            }
+        }
+
+        window.updateStatus = function (message) {
+            document.getElementById('status-sub').textContent = message;
+        }
+
+        window.updateBinding = function (target, value) {
+            // Map target name to actual button ID
+            const btnId = target === 'deafen' ? 'btn-bind-deaf' : 'btn-bind-mute';
+            const btn = document.getElementById(btnId);
+            if (btn) {
+                btn.classList.remove('binding');
+                btn.textContent = value;
+            }
+            document.getElementById('btn-bind-deaf').disabled = false;
+            document.getElementById('btn-bind-mute').disabled = false;
+            bindingTarget = null;
+            showNotification('已綁定: ' + value);
+        }
+
+        window.updateLastInput = function (input) {
+            document.getElementById('last-input').textContent = '最近偵測: ' + input;
+        }
+
+        window.loadConfig = function (config) {
+            document.getElementById('client-id').value = config.client_id || '';
+            document.getElementById('client-secret').value = config.client_secret || '';
+            document.getElementById('btn-bind-deaf').textContent = config.btn_deafen || 'None';
+            document.getElementById('btn-bind-mute').textContent = config.btn_mute || 'None';
+            document.getElementById('minimize-tray').checked = config.minimize_to_tray || false;
+        }
+
+        // Save config on change
+        document.getElementById('client-id').addEventListener('change', saveConfig);
+        document.getElementById('client-secret').addEventListener('change', saveConfig);
+        document.getElementById('minimize-tray').addEventListener('change', saveConfig);
+
+        function saveConfig() {
+            pywebview.api.save_config({
+                client_id: document.getElementById('client-id').value,
+                client_secret: document.getElementById('client-secret').value,
+                minimize_to_tray: document.getElementById('minimize-tray').checked
+            });
+        }
+    </script>
+</body>
+
+</html>
