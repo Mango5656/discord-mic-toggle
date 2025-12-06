@@ -1,0 +1,32 @@
+# Sensitive files
+config.json
+
+# PyInstaller
+dist/
+build/
+*.spec
+APP/
+*.exe
+*.rar
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Images (optional assets)
+*.png
+*.jpg
+*.ico
