@@ -2,41 +2,12 @@
 
 一個簡潔美觀的 Discord 靜音/拒聽控制器，支援自訂滑鼠或鍵盤快捷鍵來快速切換 Discord 的語音狀態。
 
-## ✨ 功能特色
-
-- 🎨 **精美的 Glassmorphism UI** - 玻璃擬態設計，支援深色/淺色主題切換
-- 🖱️ **自訂按鍵綁定** - 使用任意滑鼠按鍵或鍵盤按鍵控制靜音/拒聽
-- 🔄 **即時狀態同步** - 與 Discord 語音狀態即時同步
-- 📌 **系統列支援** - 可最小化至系統列背景運行
-- 🚀 **開機自動啟動** - 可設定隨 Windows 啟動
-- 🖱️ **點擊切換** - 直接點擊介面上的圖示或卡片即可切換狀態
-
-## 📸 介面預覽
+##  介面預覽
 
 應用程式採用 macOS 風格的無邊框視窗設計，具有以下特點：
 - 毛玻璃效果的卡片設計
 - 流暢的主題切換動畫
 - 直覺的按鍵綁定操作
-
-## 🛠️ 安裝方式
-
-### 方法一：下載執行檔
-1. 前往 [Releases](https://github.com/Mango5656/discord-mic-toggle/releases) 頁面
-2. 下載最新版本的 `DiscordMouseController.exe`
-3. 直接執行即可
-
-### 方法二：從原始碼運行
-```bash
-# 複製專案
-git clone https://github.com/Mango5656/discord-mic-toggle.git
-cd discord-mic-toggle
-
-# 安裝依賴
-pip install pywebview pypresence pynput pillow pystray requests
-
-# 運行
-python discord_mouse_rpc.py
-```
 
 ## ⚙️ Discord 設定
 
